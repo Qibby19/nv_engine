@@ -2,29 +2,11 @@ import 'dart:io';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:crypto/crypto.dart';
-import 'dart:convert';
 
 class QuarantineService {
   static const String _tableName = 'quarantined_files';
   static Database? _database;
-
-  // Whitelists for restoring files (avoid inifinite quarantine)
-  static Future<String> computeFileHash(File file) async {
-    final bytes = await file.readAsBytes();
-    return sha256.convert(bytes).toString();
-  }
-
-  static final Set<String> _whitelist = {};
-
-  static void addToWhitelist(String fileHash) {
-    _whitelist.add(fileHash);
-  }
-
-  static bool isWhitelisted(String fileHash) {
-    return _whitelist.contains(fileHash);
-  }
-
+  
   // Initialize the quarantine database
   static Future<Database> get database async {
     if (_database != null) return _database!;
@@ -140,10 +122,6 @@ class QuarantineService {
       
       // Copy file back to original location
       await File(quarantinePath).copy(originalPath);
-
-      // Compute hash and add to whitelist
-      final hash = await computeFileHash(File(originalPath));
-      QuarantineService.addToWhitelist(hash);
       
       // Delete quarantined file
       await File(quarantinePath).delete();
@@ -155,7 +133,6 @@ class QuarantineService {
         whereArgs: [id],
       );
       
-      print('✅ Restored and whitelisted: $originalPath');
       return true;
     } catch (e) {
       print('Error restoring file: $e');
@@ -196,6 +173,4 @@ class QuarantineService {
       return false;
     }
   }
-
-
 }
